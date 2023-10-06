@@ -51,6 +51,7 @@ for image in test_images:
                 min_distance = distance
                 closest_face = face
 
+              
         # 중앙에 가장 가까운 얼굴 바운딩 박스만 표시
         if closest_face is not None:
             color = (0, 0, 255)
