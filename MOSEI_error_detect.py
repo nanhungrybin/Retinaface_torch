@@ -5,6 +5,7 @@ import numpy as np
 import re
 import pandas as pd
 import logging
+from collections import deque
 
 # 로그 설정
 log_filename = 'error_log.log'
@@ -12,11 +13,12 @@ logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime
 
 # 수집된 데이터 중
 # 1. 사람 얼굴이 없는 동영상
-# 2. 10프레임 중에 반복되는 영상 찾기
+# 2. 10프레임 반복되는 영상 찾기
 # 3. 비디오 리더기 에러 나는 동영상 검출 => moov atom not found 오류 발생: 동영상 파일의 형식 문제 또는 손상된 파일
 # 목표 : 실현 가능한 데이터 리스트와 개수 찾기
 
 vid_error = []
+
 # 프레임 간의 최대 차이를 설정
 max_frame_diff = 10
 
@@ -46,8 +48,8 @@ for video_file in video_files:
     # VideoCapture를 사용하여 동영상 파일 열기
     cap = cv2.VideoCapture(video_file_path)
 
-    prev_frame = None
-    frame_diff_count = 0
+    # 이전 10개의 프레임을 저장 위한 큐 #######
+    prev_frames = deque(maxlen=max_frame_diff) 
     
     # 각 frame별 동영상 처리 코드 추가
     while True:
@@ -81,18 +83,28 @@ for video_file in video_files:
             logging.error(f"No Face videoname : {video_file}")
             break
 
-        # 10프레임 중에 반복되는 영상 찾기
-        if prev_frame is not None: ############
+
+        # 10프레임 동안 반복되는 영상 찾기
+
+        # 이전 프레임을 큐에 추가
+        prev_frames.append(frame.copy())
+    
+        # 처음 ~ max_frame_diff 프레임까지는 비교하지 않음
+        if len(prev_frames) < max_frame_diff:
+            continue
+
+        # max_frame_diff 프레임 이후부터 비교
+        frame_diff_count = 0
+
+        for prev_frame in prev_frames:
             frame_diff = cv2.absdiff(prev_frame, frame)
-            frame_diff_count = cv2.countNonZero(cv2.cvtColor(frame_diff, cv2.COLOR_BGR2GRAY))
+            frame_diff_count += cv2.countNonZero(cv2.cvtColor(frame_diff, cv2.COLOR_BGR2GRAY))
 
-            if frame_diff_count > max_frame_diff:
-                print(f"Frame freeze detected in video: {video_file_path}")
-                vid_error.append(video_file)
-                logging.error(f"Frame freeze detected in video: {video_file_path}")
-                break
-
-        prev_frame = frame.copy()    
+        if frame_diff_count > max_frame_diff:
+            print(f"Frame freeze detected in video: {video_file_path}")
+            vid_error.append(video_file)
+            logging.error(f"Frame freeze detected in video: {video_file_path}")
+            break
         
     # 사용한 자원 해제
     cap.release()
@@ -102,3 +114,11 @@ logging.shutdown()
 
 
 print(len(vid_error))
+
+
+
+# 리스트를 DataFrame으로 변환
+df = pd.DataFrame({'Video Name': vid_error})
+
+# DataFrame을 CSV 파일로 저장
+df.to_csv('vid_error.csv', index=False)
