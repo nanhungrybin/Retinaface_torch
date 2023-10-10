@@ -11,6 +11,7 @@ import pandas as pd
 # 3. 비디오 리더기 에러 나는 동영상 검출 => moov atom not found 오류 발생: 동영상 파일의 형식 문제 또는 손상된 파일
 # 목표 : 실현 가능한 데이터 리스트와 개수 찾기
 
+
 vid_error = []
 # 프레임 간의 최대 차이를 설정
 max_frame_diff = 10
