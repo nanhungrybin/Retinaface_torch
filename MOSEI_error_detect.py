@@ -8,7 +8,7 @@ import logging
 from collections import deque
 
 # 로그 설정
-log_filename = 'error_log.log'
+log_filename = 'Error_log.log'
 logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 수집된 데이터 중
@@ -21,7 +21,7 @@ vid_error = []
 
 # 프레임 간의 최대 차이를 설정
 # max_frame_diff 개의 이전 프레임만 비교하도록
-max_frame_diff = 20
+max_frame_diff = 10
 
 
 # default parameters ()
@@ -50,7 +50,7 @@ for video_file in video_files:
     # VideoCapture를 사용하여 동영상 파일 열기
     cap = cv2.VideoCapture(video_file_path)
 
-    # 이전 20개의 프레임을 저장 위한 큐 #######
+    # 이전 max_frame_diff개의 프레임을 저장 위한 큐 #######
     prev_frames = deque(maxlen=max_frame_diff) 
     
     # 각 frame별 동영상 처리 코드 추가
