@@ -20,7 +20,9 @@ logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime
 vid_error = []
 
 # 프레임 간의 최대 차이를 설정
-max_frame_diff = 10
+# max_frame_diff 개의 이전 프레임만 비교하도록
+max_frame_diff = 20
+
 
 # default parameters ()
 params = {'mobnet_weights_file':'/workspace/retinaface-pytorch-inference/mnet.25.pth',
@@ -48,7 +50,7 @@ for video_file in video_files:
     # VideoCapture를 사용하여 동영상 파일 열기
     cap = cv2.VideoCapture(video_file_path)
 
-    # 이전 10개의 프레임을 저장 위한 큐 #######
+    # 이전 20개의 프레임을 저장 위한 큐 #######
     prev_frames = deque(maxlen=max_frame_diff) 
     
     # 각 frame별 동영상 처리 코드 추가
@@ -96,11 +98,11 @@ for video_file in video_files:
         # max_frame_diff 프레임 이후부터 비교
         frame_diff_count = 0
 
-        for prev_frame in prev_frames:
-            frame_diff = cv2.absdiff(prev_frame, frame)
-            frame_diff_count += cv2.countNonZero(cv2.cvtColor(frame_diff, cv2.COLOR_BGR2GRAY))
+        for prev_frame in prev_frames:  # 마지막 이전 프레임까지만 비교
+            if np.array_equal(prev_frame, frame):
+                frame_diff_count += 1
 
-        if frame_diff_count > max_frame_diff:
+        if frame_diff_count > max_frame_diff : # if more than 20 frames are equal
             print(f"Frame freeze detected in video: {video_file_path}")
             vid_error.append(video_file)
             logging.error(f"Frame freeze detected in video: {video_file_path}")
