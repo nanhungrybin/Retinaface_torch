@@ -4,13 +4,17 @@ from detector import Retinaface_Detector
 import numpy as np
 import re
 import pandas as pd
+import logging
+
+# 로그 설정
+log_filename = 'error_log.log'
+logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 수집된 데이터 중
 # 1. 사람 얼굴이 없는 동영상
 # 2. 10프레임 중에 반복되는 영상 찾기
 # 3. 비디오 리더기 에러 나는 동영상 검출 => moov atom not found 오류 발생: 동영상 파일의 형식 문제 또는 손상된 파일
 # 목표 : 실현 가능한 데이터 리스트와 개수 찾기
-
 
 vid_error = []
 # 프레임 간의 최대 차이를 설정
@@ -49,15 +53,22 @@ for video_file in video_files:
     while True:
         ret, frame = cap.read()
         
+        # video reading error
+        
         if not ret:
-            print(f"Error reading video: {video_file_path}")
+            # 예외처리: "mmco: unref short failure" 에러가 발생할 때만 해당 동영상 파일을 vid_error 리스트에 추가
+            if "mmco: unref short failure" in str(cap.get(cv2.CAP_PROP_POS_FRAMES)):
+                # 터미널 출력 내용을 로그 파일에도 기록
+                logging.error(f"mmco: unref short failure in video: {video_file_path}")
+                print(f"Error reading video: {video_file_path}")
+                vid_error.append(video_file_path)
+            else:
+                # 터미널 출력 내용을 로그 파일에도 기록
+                logging.error(f"Error reading video: {video_file_path}")
+                print(f"Error reading video: {video_file_path}")
+                vid_error.append(video_file_path)
 
-            #현재 동영상 파일의 어느 프레임에서 오류
-            #print(f"Error message: {cap.get(cv2.CAP_PROP_POS_FRAME)}")
-
-            vid_error.append(video_file_path)
-
-            break
+                break
         
         # detect face
         results = detector.detect(frame, threshold=None) # if None, default threshold from params is used
@@ -66,6 +77,8 @@ for video_file in video_files:
         if results == []:
             vid_error.append(video_file)
             print(f"No Face videoname : {video_file}")
+            # 터미널 출력 내용을 로그 파일에도 기록
+            logging.error(f"No Face videoname : {video_file}")
             break
 
         # 10프레임 중에 반복되는 영상 찾기
@@ -76,6 +89,7 @@ for video_file in video_files:
             if frame_diff_count > max_frame_diff:
                 print(f"Frame freeze detected in video: {video_file_path}")
                 vid_error.append(video_file)
+                logging.error(f"Frame freeze detected in video: {video_file_path}")
                 break
 
         prev_frame = frame.copy()    
@@ -83,12 +97,8 @@ for video_file in video_files:
     # 사용한 자원 해제
     cap.release()
 
+# 로그 파일 닫기
+logging.shutdown()
 
-print(vid_error)
 
-
-# 리스트를 DataFrame으로 변환
-df = pd.DataFrame(vid_error)
-
-# DataFrame 출력
-print(df)
+print(len(vid_error))
