@@ -61,18 +61,28 @@ for video_file in video_files:
         read_error = []
 
         if not ret: #False
-            if len(read_error) / cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0.5:
-            # 예외처리: "mmco: unref short failure" 에러가 발생할 때만 해당 동영상 파일을 vid_error 리스트에 추가
-                if "mmco: unref short failure" in str(cap.get(cv2.CAP_PROP_POS_FRAMES)):
-                    # 터미널 출력 내용을 로그 파일에도 기록
-                    logging.error(f"Error reading video: {video_file_path}")
-                    print(f"Error reading video: {video_file_path}")
-                    vid_error.append(video_file_path)
-                else:
-                    # 터미널 출력 내용을 로그 파일에도 기록
-                    logging.error(f"Error reading video: {video_file_path}")
-                    print(f"Error reading video: {video_file_path}")
-                    vid_error.append(video_file_path)
+            read_error.append(video_file_path)
+
+            if cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
+
+                if read_error and len(read_error) / cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0.5:
+                # 예외처리: "mmco: unref short failure" 에러가 발생할 때만 해당 동영상 파일을 vid_error 리스트에 추가
+                    if "mmco: unref short failure" in str(cap.get(cv2.CAP_PROP_POS_FRAMES)):
+                        # 터미널 출력 내용을 로그 파일에도 기록
+                        logging.error(f"Error reading video: {video_file_path}")
+                        print(f"Error reading video: {video_file_path}")
+                        vid_error.append(video_file_path)
+                    else:
+                        # 터미널 출력 내용을 로그 파일에도 기록
+                        logging.error(f"Error reading video: {video_file_path}")
+                        print(f"Error reading video: {video_file_path}")
+                        vid_error.append(video_file_path)
+
+            else:
+                logging.error(f"Error reading video: {video_file_path}")
+                print(f"Error reading video: {video_file_path}")
+                vid_error.append(video_file_path)
+
 
             break
         
@@ -82,7 +92,7 @@ for video_file in video_files:
         # no face detect
         if results == []:
             vid_error.append(video_file)
-            read_error.append(video_file)
+            #read_error.append(video_file)
             print(f"No Face videoname : {video_file}")
             # 터미널 출력 내용을 로그 파일에도 기록
             logging.error(f"No Face videoname : {video_file}")
@@ -108,7 +118,7 @@ for video_file in video_files:
                 # 10 프레임이 모두 동일하면 반복된 것으로 간주
                 print(f"Frame freeze detected in video: {video_file_path}")
                 vid_error.append(video_file_path)
-                read_error.append(video_file)
+                #read_error.append(video_file)
                 logging.error(f"Frame freeze detected in video: {video_file_path}")
                 break
             
