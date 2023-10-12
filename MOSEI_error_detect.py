@@ -8,7 +8,7 @@ import logging
 from queue import Queue
 
 # 로그 설정
-log_filename = '13_11_log.log'
+log_filename = '10-12_log.log'
 logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 수집된 데이터 중
@@ -21,7 +21,7 @@ vid_error = []
 
 # 프레임 간의 최대 차이를 설정
 # max_frame_diff 개의 이전 프레임만 비교하도록
-max_frame_diff = 15
+max_frame_diff = 24 #15
 
 
 # default parameters ()
@@ -63,9 +63,11 @@ for video_file in video_files:
         if not ret: #False
             read_error.append(video_file_path)
 
-            if cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0:
+            if cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0: #for division error
 
-                if read_error and len(read_error) / cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0.5:
+                if read_error and len(read_error) / cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0.5: #because one of video after 148 frame error
+
+
                 # 예외처리: "mmco: unref short failure" 에러가 발생할 때만 해당 동영상 파일을 vid_error 리스트에 추가
                     if "mmco: unref short failure" in str(cap.get(cv2.CAP_PROP_POS_FRAMES)):
                         # 터미널 출력 내용을 로그 파일에도 기록
@@ -79,24 +81,38 @@ for video_file in video_files:
                         vid_error.append(video_file_path)
 
             else:
-                logging.error(f"Error reading video: {video_file_path}")
-                print(f"Error reading video: {video_file_path}")
-                vid_error.append(video_file_path)
+                if "mmco: unref short failure" in str(cap.get(cv2.CAP_PROP_POS_FRAMES)):
+                        # 터미널 출력 내용을 로그 파일에도 기록
+                        logging.error(f"Error reading video: {video_file_path}")
+                        print(f"Error reading video: {video_file_path}")
+                        vid_error.append(video_file_path)
+                else:
+                    # 터미널 출력 내용을 로그 파일에도 기록
+                    logging.error(f"Error reading video: {video_file_path}")
+                    print(f"Error reading video: {video_file_path}")
+                    vid_error.append(video_file_path)
 
 
             break
         
+        no_face = []
+        # 전체 프레임 중 중간에 얼굴이 나올경우
+
         # detect face
         results = detector.detect(frame, threshold=None) # if None, default threshold from params is used
 
-        # no face detect
-        if results == []:
-            vid_error.append(video_file)
-            #read_error.append(video_file)
-            print(f"No Face videoname : {video_file}")
-            # 터미널 출력 내용을 로그 파일에도 기록
-            logging.error(f"No Face videoname : {video_file}")
-            break
+        if len(no_face) / cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0.5:
+
+            # no face detect
+            if results == []:
+                vid_error.append(video_file)
+                no_face.append(video_file)
+
+                #read_error.append(video_file)
+                print(f"No Face videoname : {video_file}")
+                # 터미널 출력 내용을 로그 파일에도 기록
+                logging.error(f"No Face videoname : {video_file}")
+                break
 
 
         # 10프레임 사이 반복되는 영상 찾기
@@ -148,6 +164,7 @@ logging.shutdown()
 
 
 print(len(read_error))
+print(len(no_face))
 print(len(vid_error))
 
 
