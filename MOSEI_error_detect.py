@@ -84,7 +84,8 @@ for video_file in video_files:
                         print(f"Error reading video: {video_file_path}")
                         vid_error.append(video_file_path)
 
-            else:
+            elif cap.get(cv2.CAP_PROP_FRAME_COUNT) == 0:
+
                 if "mmco: unref short failure" in str(cap.get(cv2.CAP_PROP_POS_FRAMES)):
                         # 터미널 출력 내용을 로그 파일에도 기록
                         logging.error(f"Error reading video: {video_file_path}")
@@ -122,7 +123,7 @@ for video_file in video_files:
                 #read_error.append(video_file)
                 logging.error(f"Frame freeze detected in video: {video_file_path}")
                 break
-            
+
         
         no_face = []
         # 전체 프레임 중 중간에 얼굴이 나올경우
@@ -160,15 +161,22 @@ for video_file in video_files:
     # percentage of frames without faces
     total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
     frames_without_faces = sum(end - start + 1 for start, end in no_face_ranges)
-    percentage_without_faces = (frames_without_faces / total_frames) * 100
-    print(f"No Face: {video_file_path} & No Face Percentage: {percentage_without_faces:.2f}%")
-    logging.error(f"No Face: {video_file_path} & No Face Percentage: {percentage_without_faces:.2f}%")
+    
+    if total_frames > 0:
+        percentage_without_faces = (frames_without_faces / total_frames) * 100
 
-    # Print the ranges of frames without faces
-    for start, end in no_face_ranges:
-        print(f"& No Face Frame Range: {start}-{end}")
-        logging.error(f"& No Face Frame Range: {start}-{end}")
+        if percentage_without_faces > 0:
 
+            print(f"No Face: {video_file_path} & No Face Percentage: {percentage_without_faces:.2f}%")
+            logging.error(f"No Face: {video_file_path} & No Face Percentage: {percentage_without_faces:.2f}%")
+
+            # Print the ranges of frames without faces
+            for start, end in no_face_ranges:
+                print(f"& No Face Frame Range: {start}-{end}")
+                logging.error(f"& No Face Frame Range: {start}-{end}")
+
+
+       
         
     # 사용한 자원 해제
     cap.release()
@@ -185,6 +193,10 @@ print(len(vid_error))
 
 # 리스트를 DataFrame으로 변환
 df = pd.DataFrame({'Video Name': vid_error})
+
+# DataFrame을 CSV 파일로 저장
+df.to_csv('vid_error.csv', index=False)
+
 
 # DataFrame을 CSV 파일로 저장
 df.to_csv('vid_error.csv', index=False)
