@@ -8,7 +8,7 @@ import logging
 from queue import Queue
 
 # 로그 설정
-log_filename = '10-12_log.log'
+log_filename = '10-13_log.log'
 logging.basicConfig(filename=log_filename, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # 수집된 데이터 중
@@ -52,6 +52,10 @@ for video_file in video_files:
 
     ######## 이전 max_frame_diff개의 프레임을 저장 위한 QUEUE #######
     prev_frames = Queue()
+
+
+    no_face_ranges = []  # List to store the ranges of frames without faces
+    start_frame = None  # Initialize the start frame variable
     
     # 각 frame별 동영상 처리 코드 추가
     while True:
@@ -94,25 +98,6 @@ for video_file in video_files:
 
 
             break
-        
-        no_face = []
-        # 전체 프레임 중 중간에 얼굴이 나올경우
-
-        # detect face
-        results = detector.detect(frame, threshold=None) # if None, default threshold from params is used
-
-        if len(no_face) / cap.get(cv2.CAP_PROP_FRAME_COUNT) > 0.5:
-
-            # no face detect
-            if results == []:
-                vid_error.append(video_file)
-                no_face.append(video_file)
-
-                #read_error.append(video_file)
-                print(f"No Face videoname : {video_file}")
-                # 터미널 출력 내용을 로그 파일에도 기록
-                logging.error(f"No Face videoname : {video_file}")
-                break
 
 
         # 10프레임 사이 반복되는 영상 찾기
@@ -138,23 +123,52 @@ for video_file in video_files:
                 logging.error(f"Frame freeze detected in video: {video_file_path}")
                 break
             
-    
-        # # 처음 ~ max_frame_diff 프레임까지는 비교하지 않음
-        # if len(prev_frames) < max_frame_diff:
-        #     continue
+        
+        no_face = []
+        # 전체 프레임 중 중간에 얼굴이 나올경우
 
-        # # max_frame_diff 프레임 이후부터 비교
-        # frame_diff_count = 0
+        # detect face
+        results = detector.detect(frame, threshold=None) # if None, default threshold from params is used
 
-        # for prev_frame in prev_frames:  # 마지막 이전 프레임까지만 비교
-        #     if np.array_equal(prev_frame, frame):
-        #         frame_diff_count += 1
+        if results: #face detect
 
-        # if frame_diff_count > max_frame_diff : # if more than 10 frames are equal
-            # print(f"Frame freeze detected in video: {video_file_path}")
-            # vid_error.append(video_file)
-            # logging.error(f"Frame freeze detected in video: {video_file_path}")
-            # break
+            if start_frame is not None:
+                # If a face is detected after a sequence of non-face frames, record the end frame of the non-face range
+                end_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES) - 1)
+                no_face_ranges.append((start_frame, end_frame))
+                start_frame = None  # Reset the start frame
+
+        else:  # No face detected in the frame
+
+            no_face.append(video_file_path)
+
+            if start_frame is None:
+                # Set the start frame of the non-face range
+                start_frame = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
+
+            #no_face_detected = True
+
+            # if no_face_detected:
+            #     no_face.append(video_file)
+
+
+    # ends with a non-face range, record it
+    if start_frame is not None:
+        end_frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) - 1)
+        no_face_ranges.append((start_frame, end_frame))
+
+    # percentage of frames without faces
+    total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    frames_without_faces = sum(end - start + 1 for start, end in no_face_ranges)
+    percentage_without_faces = (frames_without_faces / total_frames) * 100
+    print(f"No Face: {video_file_path} & No Face Percentage: {percentage_without_faces:.2f}%")
+    logging.error(f"No Face: {video_file_path} & No Face Percentage: {percentage_without_faces:.2f}%")
+
+    # Print the ranges of frames without faces
+    for start, end in no_face_ranges:
+        print(f"& No Face Frame Range: {start}-{end}")
+        logging.error(f"& No Face Frame Range: {start}-{end}")
+
         
     # 사용한 자원 해제
     cap.release()
