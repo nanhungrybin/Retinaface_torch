@@ -196,7 +196,3 @@ df = pd.DataFrame({'Video Name': vid_error})
 
 # DataFrame을 CSV 파일로 저장
 df.to_csv('vid_error.csv', index=False)
-
-
-# DataFrame을 CSV 파일로 저장
-df.to_csv('vid_error.csv', index=False)
